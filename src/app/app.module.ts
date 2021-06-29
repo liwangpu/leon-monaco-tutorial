@@ -2,10 +2,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AppComponent } from './app.component';
-
-// import { MonacoEditorComponent } from './monaco-editor/monaco-editor.component';
-
-// import { MonacoConfig } from './monaco-editor/monaco-config';
+import { MonacoEditorHelperService } from './monaco-editor-helper.service';
 
 @NgModule({
     declarations: [
@@ -13,10 +10,11 @@ import { AppComponent } from './app.component';
     ],
     imports: [
         BrowserModule,
-        FormsModule,
-        // MonacoEditorModule.forRoot(MonacoConfig) // use forRoot() in main app module only.
+        FormsModule
     ],
-    providers: [],
+    providers: [
+        MonacoEditorHelperService
+    ],
     bootstrap: [AppComponent]
 })
 export class AppModule { }
