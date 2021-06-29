@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, NgZone, OnInit, ViewChi
 import * as monaco from 'monaco-editor';
 import { listen, MessageConnection } from 'vscode-ws-jsonrpc';
 import { MonacoLanguageClient, CloseAction, ErrorAction, MonacoServices, createConnection } from 'monaco-languageclient';
-import { MonacoEditorHelperService } from './monaco-editor-helper.service';
+import { MonacoEditorHelperService } from './services';
 const ReconnectingWebSocket = require('reconnecting-websocket');
 
 @Component({
