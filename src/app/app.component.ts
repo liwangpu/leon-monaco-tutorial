@@ -51,7 +51,7 @@ export class AppComponent implements OnInit {
     public createUrl(): string {
         switch (this.languageId) {
             case 'json':
-                return 'ws://localhost:3000/sampleServer';
+                return 'ws://localhost:3008/jsonServer';
             case 'typescript':
                 return 'your/language-server';
         }
