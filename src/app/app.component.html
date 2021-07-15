@@ -2,5 +2,5 @@
 
 </div>
 <div class="content">
-    <div class="container" #container></div>
+    <ngx-monaco-editor class="monaco-editor" [options]="editorOptions" [(ngModel)]="code" (onInit)="monacoOnInit($event)"></ngx-monaco-editor>
 </div>

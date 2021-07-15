@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, ElementRef, NgZone, OnInit, ViewChild } from '@angular/core';
-import * as monaco from 'monaco-editor';
+import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
 import { listen, MessageConnection } from 'vscode-ws-jsonrpc';
 import { MonacoLanguageClient, CloseAction, ErrorAction, MonacoServices, createConnection } from 'monaco-languageclient';
-import { MonacoEditorHelperService } from './services';
+
 const ReconnectingWebSocket = require('reconnecting-websocket');
 
 @Component({
@@ -13,38 +12,32 @@ const ReconnectingWebSocket = require('reconnecting-websocket');
 })
 export class AppComponent implements OnInit {
 
-    private languageId = 'json';
-    @ViewChild('container', { static: true, read: ElementRef })
-    public container: ElementRef;
-    public constructor(
-        private zone: NgZone,
-        private editorHelper: MonacoEditorHelperService
-    ) {
+    // public languageId = 'plaintext';
+    public languageId = 'json';
+    public editorOptions = { theme: 'vs-dark', language: this.languageId };
+    public code = ``;
+    public constructor() {
     }
 
     public ngOnInit(): void {
-        this.zone.runOutsideAngular(() => {
-            this.editorHelper.editorReady$
-                .subscribe(() => {
-                    const editor = monaco.editor.create(this.container.nativeElement, {
-                        theme: 'vs-dark',
-                        wordWrap: 'on'
-                    });
-                    MonacoServices.install(editor);
-                    // create the web socket
-                    const url = this.createUrl();
-                    const webSocket = this.createWebSocket(url);
-                    // listen when the web socket is opened
-                    listen({
-                        webSocket,
-                        onConnection: (connection: MessageConnection) => {
-                            // create and start the language client
-                            const languageClient = this.createLanguageClient(connection);
-                            const disposable = languageClient.start();
-                            connection.onClose(() => disposable.dispose());
-                        }
-                    });
-                });
+
+    }
+
+    public monacoOnInit(editor) {
+        // install Monaco language client services
+        MonacoServices.install(editor);
+        // create the web socket
+        const url = this.createUrl();
+        const webSocket = this.createWebSocket(url);
+        // listen when the web socket is opened
+        listen({
+            webSocket,
+            onConnection: (connection: MessageConnection) => {
+                // create and start the language client
+                const languageClient = this.createLanguageClient(connection);
+                const disposable = languageClient.start();
+                connection.onClose(() => disposable.dispose());
+            }
         });
     }
 
@@ -52,12 +45,15 @@ export class AppComponent implements OnInit {
         switch (this.languageId) {
             case 'json':
                 return 'ws://localhost:3008/jsonServer';
+            case 'plaintext':
+                return 'ws://localhost:3008/textServer';
             case 'typescript':
                 return 'your/language-server';
         }
     }
 
     public createLanguageClient(connection: MessageConnection): MonacoLanguageClient {
+
         return new MonacoLanguageClient({
             name: `${this.languageId.toUpperCase()} Client`,
             clientOptions: {

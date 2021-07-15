@@ -2,7 +2,9 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AppComponent } from './app.component';
-import { MonacoEditorHelperService } from './services';
+// import { MonacoEditorHelperService } from './services';
+import { MonacoEditorModule } from 'ngx-monaco-editor';
+import { MonacoConfig } from './monaco-config';
 
 @NgModule({
     declarations: [
@@ -10,10 +12,11 @@ import { MonacoEditorHelperService } from './services';
     ],
     imports: [
         BrowserModule,
-        FormsModule
+        FormsModule,
+        MonacoEditorModule.forRoot(MonacoConfig)
     ],
     providers: [
-        MonacoEditorHelperService
+        // MonacoEditorHelperService
     ],
     bootstrap: [AppComponent]
 })

@@ -20,6 +20,8 @@ const main_1 = require("vscode-languageserver/lib/node/main");
 const vscode_languageserver_protocol_1 = require("vscode-languageserver-protocol");
 const vscode_json_languageservice_1 = require("vscode-json-languageservice");
 const TextDocumentImpl = require("vscode-languageserver-textdocument");
+const rpc = require("@codingame/monaco-jsonrpc");
+
 function start(reader, writer) {
     const connection = main_1.createConnection(reader, writer);
     const server = new JsonServer(connection);
@@ -60,9 +62,9 @@ class JsonServer {
                     hoverProvider: true,
                     documentSymbolProvider: true,
                     documentRangeFormattingProvider: true,
-                    // executeCommandProvider: {
-                    //     commands: ['json.documentUpper']
-                    // },
+                    executeCommandProvider: {
+                        commands: ['json.documentUpper']
+                    },
                     colorProvider: true,
                     foldingRangeProvider: true
                 }
@@ -221,4 +223,12 @@ class JsonServer {
         return this.jsonService.parseJSONDocument(document);
     }
 }
-exports.JsonServer = JsonServer;
+
+function launch(socket) {
+    const reader = new rpc.WebSocketMessageReader(socket);
+    const writer = new rpc.WebSocketMessageWriter(socket);
+    const connection = main_1.createConnection(reader, writer);
+    const server = new JsonServer(connection);
+    server.start();
+}
+exports.launch = launch;

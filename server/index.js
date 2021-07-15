@@ -3,7 +3,8 @@ const url = require("url");
 const express = require("express");
 const debug = require('debug')('express-learn:server');
 const http = require('http');
-const json_server_launcher = require("./json-server-launcher");
+const json_server = require("./json-server");
+const text_server = require('./text-server');
 
 const app = express();
 /**
@@ -41,12 +42,35 @@ server.on('upgrade', (request, socket, head) => {
             };
             // launch the server when the web socket is opened
             if (webSocket.readyState === webSocket.OPEN) {
-                json_server_launcher.launch(socket);
+                json_server.launch(socket);
             }
             else {
-                webSocket.on('open', () => json_server_launcher.launch(socket));
+                webSocket.on('open', () => json_server.launch(socket));
             }
         });
+    } else if ('/textServer') {
+        wss.handleUpgrade(request, socket, head, webSocket => {
+            const socket = {
+                send: content => webSocket.send(content, error => {
+                    if (error) {
+                        throw error;
+                    }
+                }),
+                onMessage: cb => webSocket.on('message', cb),
+                onError: cb => webSocket.on('error', cb),
+                onClose: cb => webSocket.on('close', cb),
+                dispose: () => webSocket.close()
+            };
+            // launch the server when the web socket is opened
+            if (webSocket.readyState === webSocket.OPEN) {
+                text_server.launch(socket);
+            }
+            else {
+                webSocket.on('open', () => text_server.launch(socket));
+            }
+        });
+    } else {
+        console.log('no match language server');
     }
 });
 
