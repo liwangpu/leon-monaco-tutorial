@@ -1,14 +1,14 @@
 {
-    "name": "angular-monaco-languageclient",
+    "name": "monaco-tutorial",
     "version": "0.0.0",
     "scripts": {
+        "prepare": "cd server && npm i",
         "ng": "ng",
         "start": "ng serve",
         "build": "ng build",
         "test": "ng test",
-        "lint": "ng lint",
-        "e2e": "ng e2e",
-        "server": "nodemon ./server/index"
+        "build-server": "cd server && npm run build",
+        "launch-server": "cd server && npm run start"
     },
     "private": true,
     "dependencies": {
@@ -44,12 +44,9 @@
         "vscode-languageserver": "7.0.0",
         "vscode-uri": "^3.0.2",
         "express": "^4.15.2",
-        "debug": "~2.6.9",
-        "nodemon": "^2.0.2",
         "codelyzer": "^5.1.2",
         "protractor": "~5.4.0",
         "ts-node": "~7.0.0",
-        "tslint": "~5.15.0",
         "typescript": "~3.7.5"
     }
 }
