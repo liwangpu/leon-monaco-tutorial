@@ -1,11 +1,6 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) 2018 TypeFox GmbH (http://www.typefox.io). All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
 import * as fs from "fs";
 import { xhr, getErrorStatusDescription } from 'request-light';
 import { URI } from 'vscode-uri';
-// import { MessageReader, MessageWriter } from "vscode-jsonrpc";
 import { _Connection, TextDocuments, DocumentSymbolParams, createConnection } from 'vscode-languageserver/lib/node/main';
 import {
     Diagnostic, Command, CompletionList, CompletionItem, Hover,
