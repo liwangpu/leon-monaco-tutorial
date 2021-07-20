@@ -10,8 +10,11 @@ import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteComma
 import { getLanguageService, LanguageService, JSONDocument } from "vscode-json-languageservice";
 import * as TextDocumentImpl from "vscode-languageserver-textdocument";
 import * as rpc from "@codingame/monaco-jsonrpc";
+import { OmniSharpServer } from "./my/server";
+import { EventStream } from "./my/EventStream";
+import OptionProvider from "./my/OptionProvider";
 
-class JsonServer {
+class CsharpServer {
 
     protected workspaceRoot: URI | undefined;
 
@@ -26,6 +29,9 @@ class JsonServer {
     constructor(
         protected readonly connection: _Connection
     ) {
+
+        let server = new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false)
+        server.autoStart(null);
         this.documents.listen(this.connection);
         this.documents.onDidChangeContent(change =>
             this.validate(change.document)
@@ -64,11 +70,18 @@ class JsonServer {
         this.connection.onCodeAction(params =>
             this.codeAction(params)
         );
-        this.connection.onCompletion(params =>
-            this.completion(params)
+        this.connection.onCompletion(params => {
+
+
+            console.log(params);
+            return this.completion(params);
+        }
         );
-        this.connection.onCompletionResolve(item =>
-            this.resolveCompletion(item)
+        this.connection.onCompletionResolve(item => {
+
+            console.log(item);
+            return this.resolveCompletion(item);
+        }
         );
         this.connection.onExecuteCommand(params =>
             this.executeCommand(params)
@@ -91,6 +104,7 @@ class JsonServer {
         this.connection.onFoldingRanges(params =>
             this.getFoldingRanges(params)
         );
+
     }
 
     start() {
@@ -219,7 +233,7 @@ class JsonServer {
         this.pendingValidationRequests.set(document.uri, setTimeout(() => {
             this.pendingValidationRequests.delete(document.uri);
             this.doValidate(document);
-        }, 0));
+        },0));
     }
 
     protected cleanPendingValidation(document: TextDocumentImpl.TextDocument): void {
@@ -261,7 +275,7 @@ export function launch(socket: rpc.IWebSocket) {
     const reader = new rpc.WebSocketMessageReader(socket);
     const writer = new rpc.WebSocketMessageWriter(socket);
     const connection = createConnection(reader, writer);
-    const server = new JsonServer(connection);
+    const server = new CsharpServer(connection);
     server.start();
 }
 

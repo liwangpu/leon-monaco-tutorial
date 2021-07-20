@@ -1,0 +1,37 @@
+
+export class Options {
+    constructor(
+        public path: string,
+        public useGlobalMono: string,
+        public waitForDebugger: boolean,
+        public loggingLevel: string,
+        public autoStart: boolean,
+        public projectLoadTimeout: number,
+        public maxProjectResults: number,
+        public useEditorFormattingSettings: boolean,
+        public useFormatting: boolean,
+        public organizeImportsOnFormat: boolean,
+        public showReferencesCodeLens: boolean,
+        public showTestsCodeLens: boolean,
+        public filteredSymbolsCodeLens: string[],
+        public disableCodeActions: boolean,
+        public disableMSBuildDiagnosticWarning: boolean,
+        public showOmnisharpLogOnError: boolean,
+        public minFindSymbolsFilterLength: number,
+        public maxFindSymbolsItems: number,
+        public razorDisabled: boolean,
+        public razorDevMode: boolean,
+        public enableMsBuildLoadProjectsOnDemand: boolean,
+        public enableRoslynAnalyzers: boolean,
+        public enableEditorConfigSupport: boolean,
+        public enableDecompilationSupport: boolean,
+        public enableImportCompletion: boolean,
+        public enableAsyncCompletion: boolean,
+        public useSemanticHighlighting: boolean,
+        public razorPluginPath?: string,
+        public defaultLaunchSolution?: string,
+        public monoPath?: string,
+        public excludePaths?: string[],
+        public maxProjectFileCountForDiagnosticAnalysis?: number | null) {
+    }
+}

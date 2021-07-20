@@ -13,7 +13,8 @@ const ReconnectingWebSocket = require('reconnecting-websocket');
 export class AppComponent implements OnInit {
 
     // public languageId = 'plaintext';
-    public languageId = 'json';
+    // public languageId = 'json';
+    public languageId = 'csharp';
     public editorOptions = { theme: 'vs-dark', language: this.languageId };
     public code = ``;
     public constructor() {
@@ -45,6 +46,8 @@ export class AppComponent implements OnInit {
         switch (this.languageId) {
             case 'json':
                 return 'ws://localhost:3008/jsonServer';
+                case 'csharp':
+                    return 'ws://localhost:3008/csharpServer';
             case 'plaintext':
                 return 'ws://localhost:3008/textServer';
             case 'typescript':

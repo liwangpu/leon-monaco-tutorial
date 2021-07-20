@@ -5,6 +5,7 @@ import * as net from "net";
 import * as express from "express";
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { launch as jsonServerLaunch } from "./json-server";
+import { launch as csharpServerLaunch } from "./csharp-server";
 
 process.on('uncaughtException', function (err: any) {
     console.error('Uncaught Exception: ', err.toString());
@@ -47,7 +48,30 @@ server.on('upgrade', (request: http.IncomingMessage, socket: net.Socket, head: B
                 webSocket.on('open', () => jsonServerLaunch(socket));
             }
         });
-    } else {
+    } else   if (pathname === '/csharpServer') {
+        wss.handleUpgrade(request, socket, head, webSocket => {
+            const socket: rpc.IWebSocket = {
+                send: content => webSocket.send(content, error => {
+                    if (error) {
+                        throw error;
+                    }
+                }),
+                onMessage: cb => webSocket.on('message', cb),
+                onError: cb => webSocket.on('error', cb),
+                onClose: cb => webSocket.on('close', cb),
+                dispose: () => webSocket.close()
+            };
+            // launch the server when the web socket is opened
+            if (webSocket.readyState === webSocket.OPEN) {
+                csharpServerLaunch(socket);
+            } else {
+                webSocket.on('open', () => csharpServerLaunch(socket));
+            }
+        });
+    } 
+    
+    
+    else {
         console.log('no match language server');
     }
 })

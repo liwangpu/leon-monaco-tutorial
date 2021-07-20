@@ -3,11 +3,16 @@
         "target": "es6",
         "module": "commonjs",
         "moduleResolution": "node",
+        "lib": [
+            "es6"
+        ],
         "sourceMap": true,
         "declarationMap": false,
         "inlineSources": false,
         "declaration": false,
-        "stripInternal": true,
+        "skipLibCheck": true,
+        "alwaysStrict": false,
+        "noImplicitAny": false
     },
     "include": [
         "src/**/*.ts"
