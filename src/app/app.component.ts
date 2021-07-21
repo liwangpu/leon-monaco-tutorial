@@ -16,7 +16,13 @@ export class AppComponent implements OnInit {
     // public languageId = 'json';
     public languageId = 'csharp';
     public editorOptions = { theme: 'vs-dark', language: this.languageId };
-    public code = ``;
+    public code = `
+        class A{
+            void Foo(){
+                "abc"
+            }
+        }
+`;
     public constructor() {
     }
 

@@ -59,14 +59,11 @@ class CsharpServer {
                     codeActionProvider: true,
                     completionProvider: {
                         resolveProvider: true,
-                        triggerCharacters: ['"', ':']
+                        triggerCharacters: ['"', ':','.']
                     },
                     hoverProvider: true,
                     documentSymbolProvider: true,
                     documentRangeFormattingProvider: true,
-                    executeCommandProvider: {
-                        commands: ['json.documentUpper']
-                    },
                     colorProvider: true,
                     foldingRangeProvider: true
                 }
