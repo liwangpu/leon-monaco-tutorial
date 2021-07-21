@@ -1,18 +1,22 @@
 import * as fs from "fs";
 import { xhr, getErrorStatusDescription } from 'request-light';
 import { URI } from 'vscode-uri';
-import { _Connection, TextDocuments, DocumentSymbolParams, createConnection } from 'vscode-languageserver/lib/node/main';
+import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, WorkDoneProgressReporter, ResultProgressReporter } from 'vscode-languageserver/lib/node/main';
 import {
     Diagnostic, Command, CompletionList, CompletionItem, Hover,
     SymbolInformation, TextEdit, FoldingRange, ColorInformation, ColorPresentation
 } from "vscode-languageserver-types";
-import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteCommandParams, CodeActionParams, FoldingRangeParams, DocumentColorParams, ColorPresentationParams, TextDocumentSyncKind } from 'vscode-languageserver-protocol';
+import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteCommandParams, CodeActionParams, FoldingRangeParams, DocumentColorParams, ColorPresentationParams, TextDocumentSyncKind, CompletionParams, CancellationToken, HandlerResult } from 'vscode-languageserver-protocol';
 import { getLanguageService, LanguageService, JSONDocument } from "vscode-json-languageservice";
 import * as TextDocumentImpl from "vscode-languageserver-textdocument";
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./my/server";
 import { EventStream } from "./my/EventStream";
 import OptionProvider from "./my/OptionProvider";
+import { CompletionTriggerKind, TextDocument } from "vscode";
+import { CompletionRequest, CompletionResolveResponse, CompletionResponse, Requests } from "./my/protocol";
+
+const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
 
 class CsharpServer {
 
@@ -30,6 +34,7 @@ class CsharpServer {
         protected readonly connection: _Connection
     ) {
 
+        console.log('auto start server.')
         let server = new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false)
         server.autoStart(null);
         this.documents.listen(this.connection);
@@ -104,12 +109,53 @@ class CsharpServer {
         this.connection.onFoldingRanges(params =>
             this.getFoldingRanges(params)
         );
+        this.connection.onDidChangeTextDocument(params => {
+   
+           
+            let { textDocument   , contentChanges } = params;
+            let document  =  this.documents.get(textDocument.uri);
+            
+            if ( document.languageId !== 'csharp'  || contentChanges.length === 0) {
+                return;
+            }
+            
+            if (!server.isRunning()) {
+                return;
+            }
+          
+            let buff = document.getText();
+    
+            server.makeRequest(Requests.UpdateBuffer, { Buffer: buff, FileName: DefaultFileName }).catch(err => {
+                console.error(err);
+                return err;
+            });        
+        });
+
+        this.connection.onCompletion((params:CompletionParams, 
+            token:CancellationToken, 
+            workDoneProgress:WorkDoneProgressReporter, 
+            resultProgress: ResultProgressReporter<CompletionItem[]>) :HandlerResult<CompletionItem[], void> => {
+
+                let request : CompletionRequest = {
+                    CompletionTrigger : CompletionTriggerKind.TriggerCharacter,
+                    Line : params.position.line,
+                    Column: params.position.character,
+                    FileName :DefaultFileName,
+                    
+                }
+
+               let response = server.makeRequest<CompletionResponse>(Requests.Completion, request, token);
+
+
+               return null;
+            });
 
     }
 
     start() {
         this.connection.listen();
     }
+    
 
     protected getFoldingRanges(params: FoldingRangeParams): FoldingRange[] {
         const document = this.documents.get(params.textDocument.uri);

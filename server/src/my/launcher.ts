@@ -63,7 +63,8 @@ async function launch(cwd: string, args: string[], launchInfo: LaunchInfo, platf
     }
 
     if (platformInfo.isWindows()) {
-        return launchWindows(launchInfo.LaunchPath, cwd, args);
+        let result = launchWindows(launchInfo.LaunchPath, cwd, args);
+        return result;
     }
     else if (platformInfo.isLinux){
         return launchNix(launchInfo.LaunchPath, cwd, args);
