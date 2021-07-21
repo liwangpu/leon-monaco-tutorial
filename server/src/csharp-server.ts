@@ -13,7 +13,7 @@ import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./my/server";
 import { EventStream } from "./my/EventStream";
 import OptionProvider from "./my/OptionProvider";
-import { CompletionTriggerKind, TextDocument } from "vscode";
+import { CompletionTriggerKind } from "vscode-languageserver-protocol";
 import { CompletionRequest, CompletionResolveResponse, CompletionResponse, Requests } from "./my/protocol";
 
 const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
@@ -75,19 +75,21 @@ class CsharpServer {
         this.connection.onCodeAction(params =>
             this.codeAction(params)
         );
-        this.connection.onCompletion(params => {
 
 
-            console.log(params);
-            return this.completion(params);
-        }
-        );
-        this.connection.onCompletionResolve(item => {
+        // this.connection.onCompletion(params => {
 
-            console.log(item);
-            return this.resolveCompletion(item);
-        }
-        );
+
+        //     console.log(params);
+        //     return this.completion(params);
+        // }
+        // );
+        // this.connection.onCompletionResolve(item => {
+
+        //     console.log('cpmpletion resolve');
+        //     return this.resolveCompletion(item);
+        // }
+        // );
         this.connection.onExecuteCommand(params =>
             this.executeCommand(params)
         );
@@ -110,52 +112,54 @@ class CsharpServer {
             this.getFoldingRanges(params)
         );
         this.connection.onDidChangeTextDocument(params => {
-   
-           
-            let { textDocument   , contentChanges } = params;
-            let document  =  this.documents.get(textDocument.uri);
-            
-            if ( document.languageId !== 'csharp'  || contentChanges.length === 0) {
+
+
+            let { textDocument, contentChanges } = params;
+            let document = this.documents.get(textDocument.uri);
+
+            if (document.languageId !== 'csharp' || contentChanges.length === 0) {
                 return;
             }
-            
+
             if (!server.isRunning()) {
                 return;
             }
-          
+
             let buff = document.getText();
-    
+
             server.makeRequest(Requests.UpdateBuffer, { Buffer: buff, FileName: DefaultFileName }).catch(err => {
                 console.error(err);
                 return err;
-            });        
+            });
         });
 
-        this.connection.onCompletion((params:CompletionParams, 
-            token:CancellationToken, 
-            workDoneProgress:WorkDoneProgressReporter, 
-            resultProgress: ResultProgressReporter<CompletionItem[]>) :HandlerResult<CompletionItem[], void> => {
+        this.connection.onCompletion((params):Thenable<CompletionItem[] | null> => {
 
-                let request : CompletionRequest = {
-                    CompletionTrigger : CompletionTriggerKind.TriggerCharacter,
-                    Line : params.position.line,
-                    Column: params.position.character,
-                    FileName :DefaultFileName,
-                    
-                }
+            
+            let request: CompletionRequest = {
+                CompletionTrigger: CompletionTriggerKind.TriggerCharacter,
+                Line: params.position.line,
+                Column: params.position.character,
+                FileName: DefaultFileName,
+                TriggerCharacter: params.context.triggerCharacter
 
-               let response = server.makeRequest<CompletionResponse>(Requests.Completion, request, token);
+            }
 
-
-               return null;
+            let response = server.makeRequest<CompletionResponse>(Requests.Completion, request);
+                
+            return response.then(r => {
+                let rr: CompletionItem[] = r.Items.map((i) => ({ label: i.Label, kind: i.Kind, documentation: i.Documentation, commitCharacters: i.CommitCharacters }))
+               console.log(rr);
+                return Promise.resolve(rr);
             });
+        });
 
     }
 
     start() {
         this.connection.listen();
     }
-    
+
 
     protected getFoldingRanges(params: FoldingRangeParams): FoldingRange[] {
         const document = this.documents.get(params.textDocument.uri);
@@ -273,13 +277,14 @@ class CsharpServer {
         const jsonDocument = this.getJSONDocument(document);
         return this.jsonService.doComplete(document, params.position, jsonDocument);
     }
+    
 
     protected validate(document: TextDocumentImpl.TextDocument): void {
         this.cleanPendingValidation(document);
         this.pendingValidationRequests.set(document.uri, setTimeout(() => {
             this.pendingValidationRequests.delete(document.uri);
             this.doValidate(document);
-        },0));
+        }, 0));
     }
 
     protected cleanPendingValidation(document: TextDocumentImpl.TextDocument): void {
