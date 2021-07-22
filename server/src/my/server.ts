@@ -328,6 +328,7 @@ export class OmniSharpServer {
         const cwd = path.dirname(solutionPath);
 
         let args = [
+            // '-lsp',
             '-z',
             '-s', solutionPath,
             '--hostPID', process.pid.toString(),

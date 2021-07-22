@@ -1,20 +1,22 @@
 import * as fs from "fs";
 import { xhr, getErrorStatusDescription } from 'request-light';
 import { URI } from 'vscode-uri';
-import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, Range, uinteger } from 'vscode-languageserver/lib/node/main';
+import { _Connection, TextDocuments, DocumentSymbolParams, createConnection } from 'vscode-languageserver/lib/node/main';
 import {
     Diagnostic, Command, CompletionList, CompletionItem, Hover,
-    SymbolInformation, TextEdit, FoldingRange, ColorInformation, ColorPresentation
+    SymbolInformation, TextEdit, FoldingRange, ColorInformation, ColorPresentation, SignatureHelp
 } from "vscode-languageserver-types";
-import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteCommandParams, CodeActionParams, FoldingRangeParams, DocumentColorParams, ColorPresentationParams, TextDocumentSyncKind, CompletionParams, CancellationToken, HandlerResult } from 'vscode-languageserver-protocol';
+import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteCommandParams, CodeActionParams, FoldingRangeParams, DocumentColorParams, ColorPresentationParams, TextDocumentSyncKind, CompletionParams, CancellationToken, HandlerResult, SignatureInformation } from 'vscode-languageserver-protocol';
 import { getLanguageService, LanguageService, JSONDocument } from "vscode-json-languageservice";
 import * as TextDocumentImpl from "vscode-languageserver-textdocument";
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./my/server";
 import { EventStream } from "./my/EventStream";
 import OptionProvider from "./my/OptionProvider";
-import { CompletionRequest,  CompletionResponse, LinePositionSpanTextChange, Requests, UpdateBufferRequest } from "./my/protocol";
+import { CompletionRequest,  CompletionResponse,  Requests,  UpdateBufferRequest , SignatureHelp as SignatureHelpResponse, Request } from "./my/protocol";
 import { ensureServer } from "./my/serverProvider";
+
+
 
 const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
 
@@ -60,6 +62,9 @@ class CsharpServer {
                     completionProvider: {
                         resolveProvider: false,
                         triggerCharacters: ['.']
+                    },
+                    signatureHelpProvider:{
+                        triggerCharacters :['(']
                     },
                     // hoverProvider: true,
                     // documentSymbolProvider: true,
@@ -110,17 +115,42 @@ class CsharpServer {
             this.getFoldingRanges(params)
         );
 
+        this.connection.onSignatureHelp((params):Thenable<SignatureHelp> => {
+
+            let request : Request = {
+              FileName : DefaultFileName,
+              Line : params.position.line,
+              Column: params.position.character,
+            };
+            let response : Promise<SignatureHelpResponse> =server.makeRequest<SignatureHelpResponse>(Requests.SignatureHelp, request)
+            .catch(err => {
+                console.error(err);
+                return err;
+            });
+            return response.then(r =>{
+                let result : SignatureHelp = {
+                    activeSignature: r.ActiveSignature, 
+                     activeParameter : r.ActiveParameter,
+                      signatures : r.Signatures.map(s => { 
+                          return {label : s.Label,  documentation : s.Documentation, parameters : s.Parameters.map(p =>{
+                              return { label: p.Label, documentation: p.Documentation };
+                          }) };
+                        }),
+                    };
+         
+                return Promise.resolve(result);
+            });
+          
+        });
+
         this.connection.onDidOpenTextDocument(params => {
-       
- 
 
             if (!server.isRunning()) {
                 return;
             }
 
             let buff = params.textDocument.text;
-            console.log('document open')
-            console.log(buff);
+      
 
             let request : UpdateBufferRequest  =  { Buffer: buff, FileName: DefaultFileName };
             server.makeRequest(Requests.UpdateBuffer, request).catch(err => {
@@ -141,8 +171,7 @@ class CsharpServer {
             }
 
             let buff = params.contentChanges[0].text;
-            console.log('document change');
-            console.log(buff);
+      
             let request : UpdateBufferRequest  =  { Buffer: buff, FileName: DefaultFileName };
             server.makeRequest(Requests.UpdateBuffer, request).catch(err => {
                 console.error(err);
@@ -150,7 +179,7 @@ class CsharpServer {
             });
         });
 
-        this.connection.onCompletion((params):Thenable<CompletionItem[] | null> => {
+        this.connection.onCompletion((params):Thenable<CompletionItem[]> => {
 
          
             let request: CompletionRequest = {
@@ -168,13 +197,14 @@ class CsharpServer {
                 
             return response.then(r => {
                 let rr: CompletionItem[] = r.Items.map((i) => ({ label: i.Label, kind: i.Kind, documentation: i.Documentation, commitCharacters: i.CommitCharacters }))
- 
                 return Promise.resolve(rr);
             }).catch(error =>{
                 console.log(error);
                 return Promise.reject(error);
             });
         });
+
+       
 
     }
 
