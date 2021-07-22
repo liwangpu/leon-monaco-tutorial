@@ -103,7 +103,7 @@ export class OmniSharpServer {
      
         this.platformInfo = new PlatformInformation("win32", "x86_64", null) ;
 
-        this._requestQueue = new RequestQueueCollection(this.eventStream, 8, request => this._makeRequest(request));
+        this._requestQueue = new RequestQueueCollection(this.eventStream, 100, request => this._makeRequest(request));
     
         let downloader = new OmnisharpDownloader();
         this._omnisharpManager = new OmnisharpManager(downloader, this.platformInfo);
@@ -571,11 +571,11 @@ export class OmniSharpServer {
 
     public async makeRequest<TResponse>(command: string, data?: any, token?: CancellationToken): Promise<TResponse> {
 
-        console.log(command);
+      
         if (!this.isRunning()) {
             return Promise.reject<TResponse>('OmniSharp server is not running.');
         }
-
+ 
         let startTime: number;
         let request: Request;
 
@@ -729,10 +729,7 @@ export class OmniSharpServer {
     }
 
     private _makeRequest(request: Request) {
-        if (request.command == '/updatebuffer'){
-            console.log(request);
-        }
-        console.log(request.command);
+     
         const id = OmniSharpServer._nextId++;
         request.id = id;
 

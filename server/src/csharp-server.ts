@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { xhr, getErrorStatusDescription } from 'request-light';
 import { URI } from 'vscode-uri';
-import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, WorkDoneProgressReporter, ResultProgressReporter } from 'vscode-languageserver/lib/node/main';
+import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, Range, uinteger } from 'vscode-languageserver/lib/node/main';
 import {
     Diagnostic, Command, CompletionList, CompletionItem, Hover,
     SymbolInformation, TextEdit, FoldingRange, ColorInformation, ColorPresentation
@@ -13,8 +13,8 @@ import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./my/server";
 import { EventStream } from "./my/EventStream";
 import OptionProvider from "./my/OptionProvider";
-import { CompletionTriggerKind } from "vscode-languageserver-protocol";
-import { CompletionRequest, CompletionResolveResponse, CompletionResponse, Requests } from "./my/protocol";
+import { CompletionRequest,  CompletionResponse, LinePositionSpanTextChange, Requests, UpdateBufferRequest } from "./my/protocol";
+import { ensureServer } from "./my/serverProvider";
 
 const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
 
@@ -34,13 +34,13 @@ class CsharpServer {
         protected readonly connection: _Connection
     ) {
 
-        console.log('auto start server.')
-        let server = new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false)
-        server.autoStart(null);
+        var server =ensureServer(() => new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false));
+      
         this.documents.listen(this.connection);
-        this.documents.onDidChangeContent(change =>
-            this.validate(change.document)
-        );
+        this.documents.onDidChangeContent(change =>{
+  
+      
+        });
         this.documents.onDidClose(event => {
             this.cleanPendingValidation(event.document);
             this.cleanDiagnostics(event.document);
@@ -52,20 +52,20 @@ class CsharpServer {
             } else if (params.rootUri) {
                 this.workspaceRoot = URI.parse(params.rootUri);
             }
-            this.connection.console.log("The server is initialized.");
+            this.connection.console.log('connection ok');
             return {
                 capabilities: {
-                    textDocumentSync: TextDocumentSyncKind.Incremental,
-                    codeActionProvider: true,
+                    textDocumentSync: TextDocumentSyncKind.Full,
+                    // codeActionProvider: true,
                     completionProvider: {
-                        resolveProvider: true,
-                        triggerCharacters: ['"', ':','.']
+                        resolveProvider: false,
+                        triggerCharacters: ['.']
                     },
-                    hoverProvider: true,
-                    documentSymbolProvider: true,
-                    documentRangeFormattingProvider: true,
-                    colorProvider: true,
-                    foldingRangeProvider: true
+                    // hoverProvider: true,
+                    // documentSymbolProvider: true,
+                    // documentRangeFormattingProvider: true,
+                    // colorProvider: true,
+                    // foldingRangeProvider: true
                 }
             }
         });
@@ -73,6 +73,7 @@ class CsharpServer {
             this.codeAction(params)
         );
 
+        
 
         // this.connection.onCompletion(params => {
 
@@ -87,18 +88,18 @@ class CsharpServer {
         //     return this.resolveCompletion(item);
         // }
         // );
-        this.connection.onExecuteCommand(params =>
-            this.executeCommand(params)
-        );
-        this.connection.onHover(params =>
-            this.hover(params)
-        )
-        this.connection.onDocumentSymbol(params =>
-            this.findDocumentSymbols(params)
-        );
-        this.connection.onDocumentRangeFormatting(params =>
-            this.format(params)
-        );
+        // this.connection.onExecuteCommand(params =>
+        //     this.executeCommand(params)
+        // );
+        // this.connection.onHover(params =>
+        //     this.hover(params)
+        // )
+        // this.connection.onDocumentSymbol(params =>
+        //     this.findDocumentSymbols(params)
+        // );
+        // this.connection.onDocumentRangeFormatting(params =>
+        //     this.format(params)
+        // );
         this.connection.onDocumentColor(params =>
             this.findDocumentColors(params)
         );
@@ -108,13 +109,30 @@ class CsharpServer {
         this.connection.onFoldingRanges(params =>
             this.getFoldingRanges(params)
         );
+
+        this.connection.onDidOpenTextDocument(params => {
+       
+ 
+
+            if (!server.isRunning()) {
+                return;
+            }
+
+            let buff = params.textDocument.text;
+            console.log('document open')
+            console.log(buff);
+
+            let request : UpdateBufferRequest  =  { Buffer: buff, FileName: DefaultFileName };
+            server.makeRequest(Requests.UpdateBuffer, request).catch(err => {
+                console.error(err);
+                return err;
+            });
+        });
+
+        
         this.connection.onDidChangeTextDocument(params => {
-
-
-            let { textDocument, contentChanges } = params;
-            let document = this.documents.get(textDocument.uri);
-
-            if (document.languageId !== 'csharp' || contentChanges.length === 0) {
+       
+            if (params. contentChanges.length === 0) {
                 return;
             }
 
@@ -122,9 +140,11 @@ class CsharpServer {
                 return;
             }
 
-            let buff = document.getText();
-
-            server.makeRequest(Requests.UpdateBuffer, { Buffer: buff, FileName: DefaultFileName }).catch(err => {
+            let buff = params.contentChanges[0].text;
+            console.log('document change');
+            console.log(buff);
+            let request : UpdateBufferRequest  =  { Buffer: buff, FileName: DefaultFileName };
+            server.makeRequest(Requests.UpdateBuffer, request).catch(err => {
                 console.error(err);
                 return err;
             });
@@ -132,9 +152,9 @@ class CsharpServer {
 
         this.connection.onCompletion((params):Thenable<CompletionItem[] | null> => {
 
-            
+         
             let request: CompletionRequest = {
-                CompletionTrigger: CompletionTriggerKind.TriggerCharacter,
+                CompletionTrigger:  params.context.triggerKind,
                 Line: params.position.line,
                 Column: params.position.character,
                 FileName: DefaultFileName,
@@ -142,12 +162,17 @@ class CsharpServer {
 
             }
 
+      
+
             let response = server.makeRequest<CompletionResponse>(Requests.Completion, request);
                 
             return response.then(r => {
                 let rr: CompletionItem[] = r.Items.map((i) => ({ label: i.Label, kind: i.Kind, documentation: i.Documentation, commitCharacters: i.CommitCharacters }))
-               console.log(rr);
+ 
                 return Promise.resolve(rr);
+            }).catch(error =>{
+                console.log(error);
+                return Promise.reject(error);
             });
         });
 

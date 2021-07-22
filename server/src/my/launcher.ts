@@ -55,12 +55,7 @@ export async function launchOmniSharp(cwd: string, args: string[], launchInfo: L
 }
 
 async function launch(cwd: string, args: string[], launchInfo: LaunchInfo, platformInfo: PlatformInformation, options: Options): Promise<LaunchResult> {
-    if (options.useEditorFormattingSettings) {
-       
-        args.push(`formattingOptions:useTabs=${''}`);
-        args.push(`formattingOptions:tabSize=${''}`);
-        args.push(`formattingOptions:indentationSize=${''}`);
-    }
+
 
     if (platformInfo.isWindows()) {
         let result = launchWindows(launchInfo.LaunchPath, cwd, args);
