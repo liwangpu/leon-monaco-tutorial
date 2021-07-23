@@ -4,7 +4,7 @@ import { ServerCapabilities, TextDocumentSyncKind } from "vscode-languageserver/
 
 export let capabilities : ServerCapabilities<any> = {
     textDocumentSync: TextDocumentSyncKind.Full,
-    // codeActionProvider: true,
+    codeActionProvider: true,
     completionProvider: {
         resolveProvider: false,
         triggerCharacters: ['.']

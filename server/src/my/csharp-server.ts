@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { xhr, getErrorStatusDescription } from 'request-light';
 import { URI } from 'vscode-uri';
-import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, DocumentHighlight,ColorInformation } from 'vscode-languageserver/lib/node/main';
+import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, DocumentHighlight,ColorInformation, CodeAction } from 'vscode-languageserver/lib/node/main';
 import {
     Diagnostic, Command, CompletionList, CompletionItem, Hover,
     SymbolInformation, TextEdit, FoldingRange,  ColorPresentation} from "vscode-languageserver-types";
@@ -12,7 +12,7 @@ import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./server";
 import { EventStream } from "./EventStream";
 import OptionProvider from "./OptionProvider";
-import { Requests,  QuickInfoRequest, QuickInfoResponse } from "./protocol";
+import { Requests,  QuickInfoRequest, QuickInfoResponse, GetCodeActionsResponse, Request, V2 } from "./protocol";
 import { ensureServer } from "./serverProvider";
 import { registerSync } from "./features/sync";
 import { registerCompletion } from "./features/completion";
@@ -20,6 +20,7 @@ import { registerSignatureHelp } from "./features/signatureHelp";
 import { registerQuickInfo } from "./features/quickInfo";
 import { registerColorProvider } from "./features/colorProvider";
 import { capabilities } from "./capabilities";
+
 
 
 
@@ -57,10 +58,7 @@ class CsharpServer {
                 capabilities: capabilities
             }
         });
-        this.connection.onCodeAction(params =>
-            this.codeAction(params)
-        );
-
+ 
         
 
         // this.connection.onCompletionResolve(item => {
@@ -105,8 +103,24 @@ class CsharpServer {
             return null;
         });
 
-     
+        this.connection.onCodeAction((params):Thenable<CodeAction[]> =>{
+            let request : V2.GetCodeActionsRequest = { FileName: DefaultFileName, Selection : {
+                Start : { Line : params.range.start.line, Column: params.range.start.character },
+                End:{Line:params.range.end.line, Column:params.range.end.character}
+            }  };
+            let response  = server.makeRequest<V2.GetCodeActionsResponse>(V2.Requests.GetCodeActions, request);
+            return response.then(r =>{
+                let rr : CodeAction[] = r.CodeActions.map(ca => {
+                    return { title : ca.Name,   }
+                });
+                return Promise.resolve(rr);
+            })
+      
+        }
+            
+        );
 
+        
 
     }
 
