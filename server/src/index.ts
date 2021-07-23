@@ -5,7 +5,7 @@ import * as net from "net";
 import * as express from "express";
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { launch as jsonServerLaunch } from "./json-server";
-import { launch as csharpServerLaunch } from "./csharp-server";
+import { launch as csharpServerLaunch } from "./my/csharp-server";
 
 process.on('uncaughtException', function (err: any) {
     console.error('Uncaught Exception: ', err.toString());

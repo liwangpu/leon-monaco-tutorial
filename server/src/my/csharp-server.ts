@@ -1,24 +1,30 @@
 import * as fs from "fs";
 import { xhr, getErrorStatusDescription } from 'request-light';
 import { URI } from 'vscode-uri';
-import { _Connection, TextDocuments, DocumentSymbolParams, createConnection } from 'vscode-languageserver/lib/node/main';
+import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, DocumentHighlight,ColorInformation } from 'vscode-languageserver/lib/node/main';
 import {
     Diagnostic, Command, CompletionList, CompletionItem, Hover,
-    SymbolInformation, TextEdit, FoldingRange, ColorInformation, ColorPresentation, SignatureHelp
-} from "vscode-languageserver-types";
-import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteCommandParams, CodeActionParams, FoldingRangeParams, DocumentColorParams, ColorPresentationParams, TextDocumentSyncKind, CompletionParams, CancellationToken, HandlerResult, SignatureInformation } from 'vscode-languageserver-protocol';
+    SymbolInformation, TextEdit, FoldingRange,  ColorPresentation} from "vscode-languageserver-types";
+import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteCommandParams, CodeActionParams, FoldingRangeParams, DocumentColorParams, ColorPresentationParams, TextDocumentSyncKind } from 'vscode-languageserver-protocol';
 import { getLanguageService, LanguageService, JSONDocument } from "vscode-json-languageservice";
 import * as TextDocumentImpl from "vscode-languageserver-textdocument";
 import * as rpc from "@codingame/monaco-jsonrpc";
-import { OmniSharpServer } from "./my/server";
-import { EventStream } from "./my/EventStream";
-import OptionProvider from "./my/OptionProvider";
-import { CompletionRequest,  CompletionResponse,  Requests,  UpdateBufferRequest , SignatureHelp as SignatureHelpResponse, Request } from "./my/protocol";
-import { ensureServer } from "./my/serverProvider";
+import { OmniSharpServer } from "./server";
+import { EventStream } from "./EventStream";
+import OptionProvider from "./OptionProvider";
+import { Requests,  QuickInfoRequest, QuickInfoResponse } from "./protocol";
+import { ensureServer } from "./serverProvider";
+import { registerSync } from "./features/sync";
+import { registerCompletion } from "./features/completion";
+import { registerSignatureHelp } from "./features/signatureHelp";
+import { registerQuickInfo } from "./features/quickInfo";
+import { registerColorProvider } from "./features/colorProvider";
+import { capabilities } from "./capabilities";
 
 
 
-const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
+
+export const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
 
 class CsharpServer {
 
@@ -36,42 +42,19 @@ class CsharpServer {
         protected readonly connection: _Connection
     ) {
 
-        var server =ensureServer(() => new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false));
+        let server =ensureServer(() => new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false));
       
         this.documents.listen(this.connection);
-        this.documents.onDidChangeContent(change =>{
-  
-      
-        });
+     
         this.documents.onDidClose(event => {
             this.cleanPendingValidation(event.document);
             this.cleanDiagnostics(event.document);
         });
 
         this.connection.onInitialize(params => {
-            if (params.rootPath) {
-                this.workspaceRoot = URI.file(params.rootPath);
-            } else if (params.rootUri) {
-                this.workspaceRoot = URI.parse(params.rootUri);
-            }
             this.connection.console.log('connection ok');
             return {
-                capabilities: {
-                    textDocumentSync: TextDocumentSyncKind.Full,
-                    // codeActionProvider: true,
-                    completionProvider: {
-                        resolveProvider: false,
-                        triggerCharacters: ['.']
-                    },
-                    signatureHelpProvider:{
-                        triggerCharacters :['(']
-                    },
-                    // hoverProvider: true,
-                    // documentSymbolProvider: true,
-                    // documentRangeFormattingProvider: true,
-                    // colorProvider: true,
-                    // foldingRangeProvider: true
-                }
+                capabilities: capabilities
             }
         });
         this.connection.onCodeAction(params =>
@@ -80,13 +63,6 @@ class CsharpServer {
 
         
 
-        // this.connection.onCompletion(params => {
-
-
-        //     console.log(params);
-        //     return this.completion(params);
-        // }
-        // );
         // this.connection.onCompletionResolve(item => {
 
         //     console.log('cpmpletion resolve');
@@ -96,9 +72,7 @@ class CsharpServer {
         // this.connection.onExecuteCommand(params =>
         //     this.executeCommand(params)
         // );
-        // this.connection.onHover(params =>
-        //     this.hover(params)
-        // )
+   
         // this.connection.onDocumentSymbol(params =>
         //     this.findDocumentSymbols(params)
         // );
@@ -115,96 +89,24 @@ class CsharpServer {
             this.getFoldingRanges(params)
         );
 
-        this.connection.onSignatureHelp((params):Thenable<SignatureHelp> => {
+    
 
-            let request : Request = {
-              FileName : DefaultFileName,
-              Line : params.position.line,
-              Column: params.position.character,
-            };
-            let response : Promise<SignatureHelpResponse> =server.makeRequest<SignatureHelpResponse>(Requests.SignatureHelp, request)
-            .catch(err => {
-                console.error(err);
-                return err;
-            });
-            return response.then(r =>{
-                let result : SignatureHelp = {
-                    activeSignature: r.ActiveSignature, 
-                     activeParameter : r.ActiveParameter,
-                      signatures : r.Signatures.map(s => { 
-                          return {label : s.Label,  documentation : s.Documentation, parameters : s.Parameters.map(p =>{
-                              return { label: p.Label, documentation: p.Documentation };
-                          }) };
-                        }),
-                    };
-         
-                return Promise.resolve(result);
-            });
-          
-        });
+        registerSync(this.connection, server);
 
-        this.connection.onDidOpenTextDocument(params => {
-
-            if (!server.isRunning()) {
-                return;
-            }
-
-            let buff = params.textDocument.text;
+        registerCompletion(this.connection, server);
       
+        registerSignatureHelp(this.connection, server);
 
-            let request : UpdateBufferRequest  =  { Buffer: buff, FileName: DefaultFileName };
-            server.makeRequest(Requests.UpdateBuffer, request).catch(err => {
-                console.error(err);
-                return err;
-            });
-        });
-
-        
-        this.connection.onDidChangeTextDocument(params => {
+        registerQuickInfo(this.connection, server);
        
-            if (params. contentChanges.length === 0) {
-                return;
-            }
+        registerColorProvider(this.connection, server);
 
-            if (!server.isRunning()) {
-                return;
-            }
-
-            let buff = params.contentChanges[0].text;
-      
-            let request : UpdateBufferRequest  =  { Buffer: buff, FileName: DefaultFileName };
-            server.makeRequest(Requests.UpdateBuffer, request).catch(err => {
-                console.error(err);
-                return err;
-            });
+        this.connection.onDocumentHighlight((params) : Thenable<DocumentHighlight[]> =>{
+            return null;
         });
 
-        this.connection.onCompletion((params):Thenable<CompletionItem[]> => {
+     
 
-         
-            let request: CompletionRequest = {
-                CompletionTrigger:  params.context.triggerKind,
-                Line: params.position.line,
-                Column: params.position.character,
-                FileName: DefaultFileName,
-                TriggerCharacter: params.context.triggerCharacter
-
-            }
-
-      
-
-            let response = server.makeRequest<CompletionResponse>(Requests.Completion, request);
-                
-            return response.then(r => {
-                let rr: CompletionItem[] = r.Items.map((i) => ({ label: i.Label, kind: i.Kind, documentation: i.Documentation, commitCharacters: i.CommitCharacters }))
-                return Promise.resolve(rr);
-            }).catch(error =>{
-                console.log(error);
-                return Promise.reject(error);
-            });
-        });
-
-       
 
     }
 
@@ -288,15 +190,6 @@ class CsharpServer {
                 });
             }
         }
-    }
-
-    protected hover(params: TextDocumentPositionParams): Thenable<Hover | null> {
-        const document = this.documents.get(params.textDocument.uri);
-        if (!document) {
-            return Promise.resolve(null);
-        }
-        const jsonDocument = this.getJSONDocument(document);
-        return this.jsonService.doHover(document, params.position, jsonDocument);
     }
 
     protected async resolveSchema(url: string): Promise<string> {
