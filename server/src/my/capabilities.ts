@@ -4,15 +4,17 @@ import { ServerCapabilities, TextDocumentSyncKind } from "vscode-languageserver/
 
 export let capabilities : ServerCapabilities<any> = {
     textDocumentSync: TextDocumentSyncKind.Full,
-    codeActionProvider: true,
-    completionProvider: {
-        resolveProvider: false,
-        triggerCharacters: ['.']
-    },
-    signatureHelpProvider:{
-        triggerCharacters :['(']
-    },
-    hoverProvider: true,
+   
+    // completionProvider: {
+    //     resolveProvider: false,
+    //     triggerCharacters: ['.']
+    // },
+    
+    // signatureHelpProvider:{
+    //     triggerCharacters :['(']
+    // },
+    // hoverProvider: true,
+    // codeActionProvider: true,
     // documentHighlightProvider: true,
     // documentSymbolProvider: true,
     // documentRangeFormattingProvider: true,

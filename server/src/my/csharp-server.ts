@@ -1,5 +1,5 @@
 import { URI } from 'vscode-uri';
-import { _Connection, TextDocuments, createConnection, DocumentHighlight, CodeAction } from 'vscode-languageserver/lib/node/main';
+import { _Connection, createConnection, Diagnostic } from 'vscode-languageserver/lib/node/main';
 
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./server";
@@ -12,6 +12,8 @@ import { registerQuickInfo } from "./features/quickInfo";
 import { registerColorProvider } from "./features/colorProvider";
 import { capabilities } from "./capabilities";
 import { registerCodeAction } from './features/codeAction';
+import { QuickFixResponse, Request, Requests, V2 } from './protocol';
+
 
 export const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
 
@@ -23,11 +25,11 @@ class CsharpServer {
 
     protected readonly pendingValidationRequests = new Map<string, any>();
 
-    constructor(private readonly connection: _Connection, private readonly server : OmniSharpServer) {
+    constructor(private readonly connection: _Connection, private readonly server: OmniSharpServer) {
     }
 
     initialize() {
-     
+
         this.connection.onInitialize(params => {
             this.connection.console.log('connection ok');
             return {
@@ -45,11 +47,10 @@ class CsharpServer {
 
         registerColorProvider(this.connection, this.server);
 
-        registerCodeAction(this.connection, this.server);   
-
+        registerCodeAction(this.connection, this.server);
     }
 
-  
+
 }
 
 
@@ -63,7 +64,7 @@ async function ensureServer() {
     return server;
 }
 
-export async function launch(socket: rpc.IWebSocket)  {
+export async function launch(socket: rpc.IWebSocket) {
     const reader = new rpc.WebSocketMessageReader(socket);
     const writer = new rpc.WebSocketMessageWriter(socket);
     const connection = createConnection(reader, writer);
