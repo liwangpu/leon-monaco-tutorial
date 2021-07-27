@@ -1,7 +1,6 @@
 import { URI } from 'vscode-uri';
 import { _Connection, TextDocuments, createConnection, DocumentHighlight, CodeAction } from 'vscode-languageserver/lib/node/main';
 
-import * as TextDocumentImpl from "vscode-languageserver-textdocument";
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./server";
 import { EventStream } from "./EventStream";
