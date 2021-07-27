@@ -20,7 +20,7 @@ class CsharpServer {
 
     protected workspaceRoot: URI | undefined;
 
-    protected readonly documents = new TextDocuments(TextDocumentImpl.TextDocument);
+
 
     protected readonly pendingValidationRequests = new Map<string, any>();
 
@@ -28,8 +28,7 @@ class CsharpServer {
     }
 
     initialize() {
-        this.documents.listen(this.connection);
-
+     
         this.connection.onInitialize(params => {
             this.connection.console.log('connection ok');
             return {
@@ -65,7 +64,7 @@ async function ensureServer() {
     return server;
 }
 
-export async function launch(socket: rpc.IWebSocket) {
+export async function launch(socket: rpc.IWebSocket)  {
     const reader = new rpc.WebSocketMessageReader(socket);
     const writer = new rpc.WebSocketMessageWriter(socket);
     const connection = createConnection(reader, writer);
