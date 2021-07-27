@@ -1,29 +1,18 @@
-import * as fs from "fs";
-import { xhr, getErrorStatusDescription } from 'request-light';
 import { URI } from 'vscode-uri';
-import { _Connection, TextDocuments, DocumentSymbolParams, createConnection, DocumentHighlight,ColorInformation, CodeAction } from 'vscode-languageserver/lib/node/main';
-import {
-    Diagnostic, Command, CompletionList, CompletionItem, Hover,
-    SymbolInformation, TextEdit, FoldingRange,  ColorPresentation} from "vscode-languageserver-types";
-import { TextDocumentPositionParams, DocumentRangeFormattingParams, ExecuteCommandParams, CodeActionParams, FoldingRangeParams, DocumentColorParams, ColorPresentationParams, TextDocumentSyncKind } from 'vscode-languageserver-protocol';
-import { getLanguageService, LanguageService, JSONDocument } from "vscode-json-languageservice";
+import { _Connection, TextDocuments, createConnection, DocumentHighlight, CodeAction } from 'vscode-languageserver/lib/node/main';
+
 import * as TextDocumentImpl from "vscode-languageserver-textdocument";
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./server";
 import { EventStream } from "./EventStream";
 import OptionProvider from "./OptionProvider";
-import { Requests,  QuickInfoRequest, QuickInfoResponse, GetCodeActionsResponse, Request, V2 } from "./protocol";
-import { ensureServer } from "./serverProvider";
 import { registerSync } from "./features/sync";
 import { registerCompletion } from "./features/completion";
 import { registerSignatureHelp } from "./features/signatureHelp";
 import { registerQuickInfo } from "./features/quickInfo";
 import { registerColorProvider } from "./features/colorProvider";
 import { capabilities } from "./capabilities";
-
-
-
-
+import { registerCodeAction } from './features/codeAction';
 
 export const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
 
@@ -33,24 +22,13 @@ class CsharpServer {
 
     protected readonly documents = new TextDocuments(TextDocumentImpl.TextDocument);
 
-    protected readonly jsonService: LanguageService = getLanguageService({
-        schemaRequestService: this.resolveSchema.bind(this)
-    });
-
     protected readonly pendingValidationRequests = new Map<string, any>();
 
-    constructor(
-        protected readonly connection: _Connection
-    ) {
+    constructor(private readonly connection: _Connection, private readonly server : OmniSharpServer) {
+    }
 
-        let server =ensureServer(() => new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false));
-      
+    initialize() {
         this.documents.listen(this.connection);
-     
-        this.documents.onDidClose(event => {
-            this.cleanPendingValidation(event.document);
-            this.cleanDiagnostics(event.document);
-        });
 
         this.connection.onInitialize(params => {
             this.connection.console.log('connection ok');
@@ -58,234 +36,41 @@ class CsharpServer {
                 capabilities: capabilities
             }
         });
- 
-        
 
-        // this.connection.onCompletionResolve(item => {
+        registerSync(this.connection, this.server);
 
-        //     console.log('cpmpletion resolve');
-        //     return this.resolveCompletion(item);
-        // }
-        // );
-        // this.connection.onExecuteCommand(params =>
-        //     this.executeCommand(params)
-        // );
-   
-        // this.connection.onDocumentSymbol(params =>
-        //     this.findDocumentSymbols(params)
-        // );
-        // this.connection.onDocumentRangeFormatting(params =>
-        //     this.format(params)
-        // );
-        this.connection.onDocumentColor(params =>
-            this.findDocumentColors(params)
-        );
-        this.connection.onColorPresentation(params =>
-            this.getColorPresentations(params)
-        );
-        this.connection.onFoldingRanges(params =>
-            this.getFoldingRanges(params)
-        );
+        registerCompletion(this.connection, this.server);
 
-    
+        registerSignatureHelp(this.connection, this.server);
 
-        registerSync(this.connection, server);
+        registerQuickInfo(this.connection, this.server);
 
-        registerCompletion(this.connection, server);
-      
-        registerSignatureHelp(this.connection, server);
+        registerColorProvider(this.connection, this.server);
 
-        registerQuickInfo(this.connection, server);
-       
-        registerColorProvider(this.connection, server);
-
-        this.connection.onDocumentHighlight((params) : Thenable<DocumentHighlight[]> =>{
-            return null;
-        });
-
-        this.connection.onCodeAction((params):Thenable<CodeAction[]> =>{
-            let request : V2.GetCodeActionsRequest = { FileName: DefaultFileName, Selection : {
-                Start : { Line : params.range.start.line, Column: params.range.start.character },
-                End:{Line:params.range.end.line, Column:params.range.end.character}
-            }  };
-            let response  = server.makeRequest<V2.GetCodeActionsResponse>(V2.Requests.GetCodeActions, request);
-            return response.then(r =>{
-                let rr : CodeAction[] = r.CodeActions.map(ca => {
-                    return { title : ca.Name,   }
-                });
-                return Promise.resolve(rr);
-            })
-      
-        }
-            
-        );
-
-        
+        registerCodeAction(this.connection, this.server);   
 
     }
 
-    start() {
-        this.connection.listen();
-    }
-
-
-    protected getFoldingRanges(params: FoldingRangeParams): FoldingRange[] {
-        const document = this.documents.get(params.textDocument.uri);
-        if (!document) {
-            return [];
-        }
-        return this.jsonService.getFoldingRanges(document);
-    }
-
-    protected findDocumentColors(params: DocumentColorParams): Thenable<ColorInformation[]> {
-        const document = this.documents.get(params.textDocument.uri);
-        if (!document) {
-            return Promise.resolve([]);
-        }
-        const jsonDocument = this.getJSONDocument(document);
-        return this.jsonService.findDocumentColors(document, jsonDocument);
-    }
-
-    protected getColorPresentations(params: ColorPresentationParams): ColorPresentation[] {
-        const document = this.documents.get(params.textDocument.uri);
-        if (!document) {
-            return [];
-        }
-        const jsonDocument = this.getJSONDocument(document);
-        return this.jsonService.getColorPresentations(document, jsonDocument, params.color, params.range);
-    }
-
-    protected codeAction(params: CodeActionParams): Command[] {
-        const document = this.documents.get(params.textDocument.uri);
-        if (!document) {
-            return [];
-        }
-        return [{
-            title: "Upper Case Document",
-            command: "json.documentUpper",
-            // Send a VersionedTextDocumentIdentifier
-            arguments: [{
-                ...params.textDocument,
-                version: document.version
-            }]
-        }];
-    }
-
-    protected format(params: DocumentRangeFormattingParams): TextEdit[] {
-        const document = this.documents.get(params.textDocument.uri);
-        return document ? this.jsonService.format(document, params.range, params.options) : [];
-    }
-
-    protected findDocumentSymbols(params: DocumentSymbolParams): SymbolInformation[] {
-        const document = this.documents.get(params.textDocument.uri);
-        if (!document) {
-            return [];
-        }
-        const jsonDocument = this.getJSONDocument(document);
-        return this.jsonService.findDocumentSymbols(document, jsonDocument);
-    }
-
-    protected executeCommand(params: ExecuteCommandParams): any {
-        if (params.command === "json.documentUpper" && params.arguments) {
-            const versionedTextDocumentIdentifier = params.arguments[0];
-            const document = this.documents.get(versionedTextDocumentIdentifier.uri);
-            if (document) {
-                this.connection.workspace.applyEdit({
-                    documentChanges: [{
-                        textDocument: versionedTextDocumentIdentifier,
-                        edits: [{
-                            range: {
-                                start: { line: 0, character: 0 },
-                                end: { line: Number.MAX_SAFE_INTEGER, character: Number.MAX_SAFE_INTEGER }
-                            },
-                            newText: document.getText().toUpperCase()
-                        }]
-                    }]
-                });
-            }
-        }
-    }
-
-    protected async resolveSchema(url: string): Promise<string> {
-        const uri = URI.parse(url);
-        if (uri.scheme === 'file') {
-            return new Promise<string>((resolve, reject) => {
-                fs.readFile(uri.fsPath, 'UTF-8', (err, result) => {
-                    err ? reject('') : resolve(result.toString());
-                });
-            });
-        }
-        try {
-            const response = await xhr({ url, followRedirects: 5 });
-            return response.responseText;
-        }
-        catch (error) {
-            return Promise.reject(error.responseText || getErrorStatusDescription(error.status) || error.toString());
-        }
-    }
-
-    protected resolveCompletion(item: CompletionItem): Thenable<CompletionItem> {
-        return this.jsonService.doResolve(item);
-    }
-
-    protected completion(params: TextDocumentPositionParams): Thenable<CompletionList | null> {
-        const document = this.documents.get(params.textDocument.uri);
-        if (!document) {
-            return Promise.resolve(null);
-        }
-        const jsonDocument = this.getJSONDocument(document);
-        return this.jsonService.doComplete(document, params.position, jsonDocument);
-    }
-    
-
-    protected validate(document: TextDocumentImpl.TextDocument): void {
-        this.cleanPendingValidation(document);
-        this.pendingValidationRequests.set(document.uri, setTimeout(() => {
-            this.pendingValidationRequests.delete(document.uri);
-            this.doValidate(document);
-        }, 0));
-    }
-
-    protected cleanPendingValidation(document: TextDocumentImpl.TextDocument): void {
-        const request = this.pendingValidationRequests.get(document.uri);
-        if (request !== undefined) {
-            clearTimeout(request);
-            this.pendingValidationRequests.delete(document.uri);
-        }
-    }
-
-    protected doValidate(document: TextDocumentImpl.TextDocument): void {
-        if (document.getText().length === 0) {
-            this.cleanDiagnostics(document);
-            return;
-        }
-        const jsonDocument = this.getJSONDocument(document);
-        this.jsonService.doValidation(document, jsonDocument).then(diagnostics =>
-            this.sendDiagnostics(document, diagnostics)
-        );
-    }
-
-    protected cleanDiagnostics(document: TextDocumentImpl.TextDocument): void {
-        this.sendDiagnostics(document, []);
-    }
-
-    protected sendDiagnostics(document: TextDocumentImpl.TextDocument, diagnostics: Diagnostic[]): void {
-        this.connection.sendDiagnostics({
-            uri: document.uri, diagnostics
-        });
-    }
-
-    protected getJSONDocument(document: TextDocumentImpl.TextDocument): JSONDocument {
-        return this.jsonService.parseJSONDocument(document);
-    }
-
+  
 }
 
-export function launch(socket: rpc.IWebSocket) {
+
+let server: OmniSharpServer;
+
+async function ensureServer() {
+    if (server === undefined) {
+        server = new OmniSharpServer(new EventStream(), new OptionProvider(), 'c:\\Users\\yicheng\\Downloads\\omnisharp-vscode-master', false);
+    }
+    await server.autoStart(null);
+    return server;
+}
+
+export async function launch(socket: rpc.IWebSocket) {
     const reader = new rpc.WebSocketMessageReader(socket);
     const writer = new rpc.WebSocketMessageWriter(socket);
     const connection = createConnection(reader, writer);
-    const server = new CsharpServer(connection);
-    server.start();
+    let server = await ensureServer();
+    new CsharpServer(connection, server).initialize();
+    connection.listen();
 }
 
