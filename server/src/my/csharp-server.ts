@@ -1,5 +1,5 @@
 import { URI } from 'vscode-uri';
-import { _Connection, createConnection, Diagnostic } from 'vscode-languageserver/lib/node/main';
+import { _Connection, createConnection, SymbolInformation, DocumentSymbol, FoldingRange } from 'vscode-languageserver/lib/node/main';
 
 import * as rpc from "@codingame/monaco-jsonrpc";
 import { OmniSharpServer } from "./server";
@@ -12,10 +12,11 @@ import { registerQuickInfo } from "./features/quickInfo";
 import { registerColorProvider } from "./features/colorProvider";
 import { capabilities } from "./capabilities";
 import { registerCodeAction } from './features/codeAction';
-import { QuickFixResponse, Request, Requests, V2 } from './protocol';
+import { V2 } from './protocol';
 
-
-export const DefaultFileName = 'c:\\Users\\yicheng\\source\\repos\RoslynTest\RoslynTest\\Program.cs';
+export const DefaultDir = 'e:\\repo\\RoslynTest';
+export const DefaultSolution = "RoslynTest.sln";
+export const  DefaultFileName2  = 'RoslynTest\\Program.cs';
 
 class CsharpServer {
 
@@ -48,6 +49,34 @@ class CsharpServer {
         registerColorProvider(this.connection, this.server);
 
         registerCodeAction(this.connection, this.server);
+
+        this.connection.onDocumentSymbol((params): Thenable<SymbolInformation[] | DocumentSymbol[]> => {
+            let request: V2.Structure.CodeStructureRequest = null;
+            let response = server.makeRequest<V2.Structure.CodeStructureResponse>(V2.Requests.CodeStructure, request);
+            return response.then(r => {
+                console.log(r);
+                return Promise.resolve(null);
+            });
+
+        });
+
+        this.connection.onFoldingRanges((params): Thenable<FoldingRange[]> => {
+            let request: V2.BlockStructureRequest = { FileName : `${DefaultDir}\\${DefaultFileName2}`  };
+            let response = server.makeRequest<V2.BlockStructureResponse>(V2.Requests.BlockStructure, request);
+            return response.then(r => {
+                let rr : FoldingRange[] =r.Spans.map(s => ({ 
+                    startLine: s.Range.Start.Line, 
+                    startCharacter: s.Range.Start.Column ,
+                    endLine: s.Range.End.Line,
+                    endCharacter: s.Range.End.Column,
+                    kind: s.Kind,
+                 } ));
+                return Promise.resolve(rr);
+            });
+        });
+
+
+
     }
 
 

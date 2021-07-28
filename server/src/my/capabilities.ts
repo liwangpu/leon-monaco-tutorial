@@ -5,10 +5,10 @@ import { ServerCapabilities, TextDocumentSyncKind } from "vscode-languageserver/
 export let capabilities : ServerCapabilities<any> = {
     textDocumentSync: TextDocumentSyncKind.Full,
    
-    // completionProvider: {
-    //     resolveProvider: false,
-    //     triggerCharacters: ['.']
-    // },
+    completionProvider: {
+        resolveProvider: false,
+        triggerCharacters: ['.']
+    },
     
     // signatureHelpProvider:{
     //     triggerCharacters :['(']
@@ -16,8 +16,8 @@ export let capabilities : ServerCapabilities<any> = {
     // hoverProvider: true,
     // codeActionProvider: true,
     // documentHighlightProvider: true,
-    // documentSymbolProvider: true,
+    documentSymbolProvider: true,
     // documentRangeFormattingProvider: true,
     // colorProvider: true,
-    // foldingRangeProvider: true
+    foldingRangeProvider: true
 };

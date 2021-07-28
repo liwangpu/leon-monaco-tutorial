@@ -1,5 +1,5 @@
 import { _Connection, CodeAction } from 'vscode-languageserver/lib/node/main';
-import { DefaultFileName } from '../csharp-server';
+import { DefaultDir, DefaultFileName2 } from '../csharp-server';
 
 import { V2 } from "../protocol";
 import { OmniSharpServer } from '../server';
@@ -9,7 +9,7 @@ export function registerCodeAction(connection: _Connection, server: OmniSharpSer
 
     connection.onCodeAction((params): Thenable<CodeAction[]> => {
         let request: V2.GetCodeActionsRequest = {
-            FileName: DefaultFileName, Selection: {
+            FileName: `${DefaultDir}\\${DefaultFileName2}`, Selection: {
                 Start: { Line: params.range.start.line, Column: params.range.start.character },
                 End: { Line: params.range.end.line, Column: params.range.end.character }
             }

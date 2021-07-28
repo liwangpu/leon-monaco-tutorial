@@ -17,7 +17,7 @@ export class AppComponent implements OnInit {
     public languageId = 'csharp';
     public editorOptions = { theme: 'vs-dark', language: this.languageId };
     public code = `
-        class A{
+        class Abc{
             void Foo(){
                 "abc"
             }

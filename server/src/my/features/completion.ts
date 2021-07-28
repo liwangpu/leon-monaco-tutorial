@@ -1,5 +1,5 @@
 import { _Connection } from "vscode-languageserver/lib/common/server";
-import { DefaultFileName } from "../csharp-server";
+import { DefaultDir, DefaultFileName2 } from "../csharp-server";
 import { CompletionRequest, CompletionResponse, Requests } from "../protocol";
 import { OmniSharpServer } from "../server";
 import { CompletionItem } from "vscode-languageserver-types";
@@ -10,7 +10,7 @@ export function registerCompletion(connection: _Connection, server: OmniSharpSer
             CompletionTrigger: params.context.triggerKind,
             Line: params.position.line,
             Column: params.position.character,
-            FileName: DefaultFileName,
+            FileName: `${DefaultDir}\\${DefaultFileName2}`,
             TriggerCharacter: params.context.triggerCharacter
         }
 

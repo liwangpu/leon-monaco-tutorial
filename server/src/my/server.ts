@@ -29,6 +29,7 @@ import OptionProvider from './OptionProvider';
 import { removeBOMFromBuffer, removeBOMFromString } from './removeBOM';
 import { OmnisharpDownloader } from './OmnisharpDownloader';
 import { OmnisharpManager } from './OmnisharpManager';
+import { DefaultDir, DefaultSolution } from './csharp-server';
 
 enum ServerState {
     Starting,
@@ -524,11 +525,11 @@ export class OmniSharpServer {
     private _findLaunchTargets() : Promise<LaunchTarget[]>{
         return Promise.resolve([
             { 
-                description:'e:\\repo\\RoslynTest',
-                directory:'e:\\repo\\RoslynTest',
-                kind:0,
-                label:'RoslynTest.sln',
-                target:'e:\\repo\\RoslynTest\\RoslynTest.sln'  }
+                description:DefaultDir,
+                directory:DefaultDir,
+                kind:LaunchTargetKind.Solution,
+                label:DefaultSolution,
+                target:`${DefaultDir}\\${DefaultSolution}`  }
         ])
     }
 

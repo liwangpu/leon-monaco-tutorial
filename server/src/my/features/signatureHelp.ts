@@ -4,14 +4,14 @@ import {
 } from "vscode-languageserver-types";
 import { Requests, SignatureHelp as SignatureHelpResponse, Request } from "../protocol";
 import { OmniSharpServer } from '../server';
-import { DefaultFileName } from '../csharp-server';
+import { DefaultDir, DefaultFileName2 } from '../csharp-server';
 
 export function registerSignatureHelp(connection: _Connection, server: OmniSharpServer) {
 
     connection.onSignatureHelp((params): Thenable<SignatureHelp> => {
 
         let request: Request = {
-            FileName: DefaultFileName,
+            FileName: `${DefaultDir}\\${DefaultFileName2}`,
             Line: params.position.line,
             Column: params.position.character,
         };
